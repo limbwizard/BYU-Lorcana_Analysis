@@ -2,7 +2,6 @@
 import pandas as pd
 import numpy as np
 from scipy import stats
-from statsmodels.stats.multitest import multipletests
 
 # Scikit-learn imports
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -87,6 +86,8 @@ class LorcanaGameAnalysis:
             ), True)
         }
 
+
+
     def perform_statistical_analysis(self, df):
         # Overall Statistics
         total_games = len(df)
@@ -98,7 +99,7 @@ class LorcanaGameAnalysis:
         first_player_wins = df[df['starting_player'] == 1]['win'].mean()
         second_player_wins = df[df['starting_player'] == 0]['win'].mean()
         
-        print("\nStarting Player Effect (1 = first player):")
+        print("\nStarting Player Effect:")
         print(f"First Player Win Rate:  {first_player_wins:.1%}")
         print(f"Second Player Win Rate: {second_player_wins:.1%}")
         
@@ -107,18 +108,12 @@ class LorcanaGameAnalysis:
         second_player_results = df[df['starting_player'] == 0]['win']
         t_stat, p_value = stats.ttest_ind(first_player_results, second_player_results)
         
-        print(f"\nStatistical significance calculated using two-sample t-test")
         print(f"T-statistic: {t_stat:.3f}")
         print(f"P-value: {p_value:.3f}")
         
         # Card Analysis
         print("\nCard Analysis:")
-        print("Win Rate With: Percentage of games won when card was present in deck")
-        print("Win Rate Without: Percentage of games won when card was absent from deck")
-        print("Positive difference = better win rate when card is included\n")
-        
         card_stats = []
-        p_values = []
         
         for card in df.columns:
             if card not in ['win', 'game', 'starting_player']:
@@ -134,64 +129,32 @@ class LorcanaGameAnalysis:
                 without_card = df[df[card] == 0]['win']
                 t_stat, p_value = stats.ttest_ind(with_card, without_card)
                 
-                p_values.append(p_value)
-                
                 card_stats.append({
                     'card': card,
                     'win_rate_with': win_rate_with,
                     'win_rate_without': win_rate_without,
                     'games_played': games_with_card,
                     'difference': win_rate_with - win_rate_without,
-                    't_stat': t_stat,
                     'p_value': p_value,
-                    'significant': False  # Will update after multiple testing correction
+                    'significant': p_value < 0.05
                 })
         
-        # Apply multiple testing correction (Benjamini-Hochberg)
-        if p_values:
-            adjusted_p = multipletests(p_values, method='fdr_bh')[1]  # FDR correction
-            
-            # Update significance values with adjusted p-values
-            for i, stat in enumerate(card_stats):
-                stat['adjusted_p_value'] = adjusted_p[i]
-                stat['significant'] = adjusted_p[i] < 0.05
-        
         card_stats_df = pd.DataFrame(card_stats)
+        significant_cards = card_stats_df[card_stats_df['significant']].sort_values('difference', ascending=False)
         
-        if not card_stats_df.empty:
-            # Create impact comparison table
-            sorted_impact = card_stats_df.sort_values('difference', ascending=False)
-            top_positive = sorted_impact.head(5)
-            top_negative = sorted_impact.tail(5)
-            
-            # Create separator
-            separator = pd.DataFrame({'card': ['...'], 
-                                    'win_rate_with': [np.nan],
-                                    'win_rate_without': [np.nan],
-                                    'difference': [np.nan],
-                                    'p_value': [np.nan],
-                                    'adjusted_p_value': [np.nan]})
-            
-            # Combine tables
-            impact_table = pd.concat([top_positive, separator, top_negative])[
-                ['card', 'win_rate_with', 'win_rate_without', 'difference', 'p_value', 'adjusted_p_value']
-            ].reset_index(drop=True)
-
-            print("\nMost Impactful Cards (Presence on Win Rate):")
-            print(impact_table.to_string(formatters={
-                'win_rate_with': '{:.1%}'.format,
-                'win_rate_without': '{:.1%}'.format,
-                'difference': '{:+.3f}'.format,
-                'p_value': '{:.3f}'.format,
-                'adjusted_p_value': '{:.3f}'.format
-            }, index=False, na_rep=''))
+        print("\nSignificant Card Effects:")
+        if len(significant_cards) > 0:
+            print(significant_cards[['card', 'win_rate_with', 'win_rate_without', 
+                                   'games_played', 'difference', 'p_value']].to_string(index=False))
+        else:
+            print("No cards showed statistically significant impact on win rate.")
         
         return card_stats_df
 
     def load_data(self, file_path):
         # Load data
         df = pd.read_csv(file_path)
-        self.card_stats_df = self.perform_statistical_analysis(df)
+        self.perform_statistical_analysis(df)
         
         # Split features and target
         X = df.drop(['win', 'game'], axis=1)
@@ -219,7 +182,7 @@ class LorcanaGameAnalysis:
         if needs_calibration:
             clf_proba = CalibratedClassifierCV(estimator=clf, cv=5, method='sigmoid')
             clf_proba.fit(self.X_train_scaled, self.y_train)
-            y_pred = clf_proba.predict(self.X_test_scaled)  # FIXED: Use calibrated model for predictions
+            y_pred = clf.predict(self.X_test_scaled)
             y_pred_proba = clf_proba.predict_proba(self.X_test_scaled)[:, 1]
         else:
             y_pred = clf.predict(self.X_test_scaled)
@@ -234,13 +197,11 @@ class LorcanaGameAnalysis:
             'f1_score': round(f1_score(self.y_test, y_pred), 3),
         }
         
-        # Bootstrap confidence intervals - FIXED
+        # Bootstrap confidence intervals
         n_iterations = 1000
         scores = []
         for _ in range(n_iterations):
-            # Sample with replacement from test indices
-            indices = np.random.choice(range(len(self.y_test)), size=len(self.y_test), replace=True)
-            # Calculate accuracy on this bootstrap sample
+            indices = np.random.randint(0, len(y_pred), len(y_pred))
             score = accuracy_score(self.y_test[indices], y_pred[indices])
             scores.append(score)
         confidence_interval = np.percentile(scores, [2.5, 97.5])
@@ -304,126 +265,17 @@ class LorcanaGameAnalysis:
         importances = rf_model.feature_importances_
         indices = np.argsort(importances)[::-1]
         
-        # Get all features and their importance scores
-        all_features = [self.feature_names[i] for i in indices]
-        all_scores = importances[indices]
+        print("\nTop 10 Most Important Features:")
+        for f in range(min(10, len(self.feature_names))):
+            print("%d. %s (%f)" % (f + 1, self.feature_names[indices[f]], importances[indices[f]]))
         
-        # Create full significance table with stars
-        print("\nStatistical Significance of All Features:")
-        significance_data = []
-        for feature in all_features:
-            # Flag special features like 'starting_player'
-            is_card = feature != 'starting_player'
-            
-            if is_card and feature in self.card_stats_df['card'].values:
-                stats = self.card_stats_df[self.card_stats_df['card'] == feature].iloc[0]
-                significance_data.append({
-                    'Feature': feature,
-                    'T-statistic': stats['t_stat'],
-                    'P-value': stats['p_value'],
-                    'Adjusted_P-value': stats['adjusted_p_value'] if 'adjusted_p_value' in stats else np.nan,
-                    'Significant': stats['significant'],
-                    'Is_Card': is_card
-                })
-            else:
-                significance_data.append({
-                    'Feature': feature,
-                    'T-statistic': np.nan,
-                    'P-value': np.nan,
-                    'Adjusted_P-value': np.nan,
-                    'Significant': False,
-                    'Is_Card': is_card
-                })
-        
-        # Create and print full significance table
-        sig_df = pd.DataFrame(significance_data)
-        
-        # Add star ratings
-        star_ranges = [
-            (0.01, '★★★'),  # 3 stars for p < 0.01
-            (0.05, '★★'),    # 2 stars for p < 0.05
-            (0.1, '★'),      # 1 star for p < 0.1
-            (1.0, '')        # No stars otherwise
-        ]
-        
-        def get_stars(p_value):
-            if pd.isna(p_value):
-                return ''
-            for threshold, stars in star_ranges:
-                if p_value <= threshold:
-                    return stars
-            return ''
-        
-        # Use adjusted p-values for star ratings when available
-        sig_df['Stars'] = sig_df['Adjusted_P-value'].apply(get_stars)
-        
-        print(sig_df.to_string(formatters={
-            'T-statistic': '{:.2f}'.format,
-            'P-value': '{:.3f}'.format,
-            'Adjusted_P-value': '{:.3f}'.format,
-            'Significant': lambda x: 'Yes' if x else 'No'
-        }, index=False))
-        
-        # Create top/bottom 5 impact bar graph
-        self.plot_top_bottom_impact(sig_df)
-
-    def plot_top_bottom_impact(self, sig_df):
-        # Filter to only include card features (exclude game mechanics like starting_player)
-        card_features = sig_df[sig_df['Is_Card']]
-        
-        if len(card_features) > 0:
-            # Get top 5 and bottom 5 features by T-statistic
-            top_features = card_features.nlargest(min(5, len(card_features)), 'T-statistic')
-            bottom_features = card_features.nsmallest(min(5, len(card_features)), 'T-statistic')
-            
-            # Combine and sort
-            impact_df = pd.concat([top_features, bottom_features]).sort_values('T-statistic', ascending=False)
-            
-            # Create visualization
-            plt.figure(figsize=(12, 6))
-            plt.title("Top 5 and Bottom 5 Card Impacts by T-statistic\n"
-                    "Positive values indicate cards associated with higher win rates", 
-                    fontsize=14, pad=20)
-            
-            # Create bar colors based on direction
-            colors = ['#1f77b4' if x >= 0 else '#d62728' for x in impact_df['T-statistic']]
-            
-            bars = plt.barh(impact_df['Feature'], impact_df['T-statistic'], color=colors)
-            
-            # Add value labels
-            for bar in bars:
-                width = bar.get_width()
-                plt.text(width, bar.get_y() + bar.get_height()/2,
-                        f'{width:.2f}',
-                        ha='left' if width >= 0 else 'right',
-                        va='center',
-                        fontsize=10,
-                        bbox=dict(facecolor='white', alpha=0.8))
-            
-            # Add significance stars
-            for i, (_, row) in enumerate(impact_df.iterrows()):
-                if row['Stars']:
-                    plt.text(0.05 if row['T-statistic'] >= 0 else -0.05,
-                            i,
-                            row['Stars'],
-                            ha='left' if row['T-statistic'] >= 0 else 'right',
-                            va='center',
-                            fontsize=14,
-                            color='gold')
-            
-            plt.xlabel('T-statistic (Standardized Effect Size)', fontsize=12)
-            plt.ylabel('Card', fontsize=12)
-            plt.grid(axis='x', alpha=0.3)
-            
-            # Add explanatory text
-            plt.figtext(0.5, -0.15, 
-                    "T-statistics calculated from win rate differences with/without each card\n"
-                    "★★★: p < 0.01, ★★: p < 0.05, ★: p < 0.1 (after multiple testing correction)",
-                    ha="center", fontsize=10, style='italic')
-            
-            plt.tight_layout()
-            plt.savefig('card_impact.png', bbox_inches='tight')
-            plt.close()
+        plt.figure(figsize=(10, 6))
+        plt.title("Feature Importances")
+        plt.bar(range(10), importances[indices[:10]])
+        plt.xticks(range(10), [self.feature_names[i] for i in indices[:10]], rotation=45, ha='right')
+        plt.tight_layout()
+        plt.savefig('feature_importance.png')
+        plt.close()
 
     def create_ensemble(self):
         print("\n=== Ensemble Model Analysis ===")
@@ -431,47 +283,33 @@ class LorcanaGameAnalysis:
         predictions = {}
         for name, model in self.trained_models.items():
             if hasattr(model, 'predict_proba'):
-                try:
-                    predictions[name] = model.predict_proba(self.X_test_scaled)[:, 1]
-                except Exception as e:
-                    print(f"Warning: Could not get probability predictions from {name}. Error: {e}")
+                predictions[name] = model.predict_proba(self.X_test_scaled)[:, 1]
         
-        if not predictions:
-            print("Error: No models available for ensemble predictions.")
-            return None, None, None, None, None
-        
-        # Get weights based on AUC scores
-        weights = {name: score for name, score in zip(self.classifier_names, self.auc_scores)
-                  if name in predictions}
+        weights = {name: score for name, score in zip(self.classifier_names, self.auc_scores)}
         
         weighted_pred = np.zeros(len(self.y_test))
         weight_sum = 0
         for name, pred in predictions.items():
             weighted_pred += pred * weights[name]
             weight_sum += weights[name]
+        weighted_pred /= weight_sum
         
-        if weight_sum > 0:
-            weighted_pred /= weight_sum
-            
-            ensemble_pred = (weighted_pred > 0.5).astype(int)
-            
-            accuracy = accuracy_score(self.y_test, ensemble_pred)
-            precision = precision_score(self.y_test, ensemble_pred)
-            recall = recall_score(self.y_test, ensemble_pred)
-            f1 = f1_score(self.y_test, ensemble_pred)
-            auc = roc_auc_score(self.y_test, weighted_pred)
-            
-            print("\nEnsemble Model Performance:")
-            print(f"Accuracy: {accuracy:.3f}")
-            print(f"Precision: {precision:.3f}")
-            print(f"Recall: {recall:.3f}")
-            print(f"F1-score: {f1:.3f}")
-            print(f"AUC: {auc:.3f}")
-            
-            return accuracy, precision, recall, f1, auc
-        else:
-            print("Error: No valid weights for ensemble prediction.")
-            return None, None, None, None, None
+        ensemble_pred = (weighted_pred > 0.5).astype(int)
+        
+        accuracy = accuracy_score(self.y_test, ensemble_pred)
+        precision = precision_score(self.y_test, ensemble_pred)
+        recall = recall_score(self.y_test, ensemble_pred)
+        f1 = f1_score(self.y_test, ensemble_pred)
+        auc = roc_auc_score(self.y_test, weighted_pred)
+        
+        print("\nEnsemble Model Performance:")
+        print(f"Accuracy: {accuracy:.3f}")
+        print(f"Precision: {precision:.3f}")
+        print(f"Recall: {recall:.3f}")
+        print(f"F1-score: {f1:.3f}")
+        print(f"AUC: {auc:.3f}")
+        
+        return accuracy, precision, recall, f1, auc
 
 def main():
     analysis = LorcanaGameAnalysis()

@@ -1,0 +1,133 @@
+
+Sample Size: 100 games
+Overall Win Rate: 41.0%
+
+Starting Player Effect (1 = first player):
+First Player Win Rate:  58.0%
+Second Player Win Rate: 24.0%
+
+Statistical significance calculated using two-sample t-test
+T-statistic: 3.646
+P-value: 0.000
+
+Card Analysis:
+Win Rate With: Percentage of games won when card was present in deck
+Win Rate Without: Percentage of games won when card was absent from deck
+Positive difference = better win rate when card is included
+
+
+Most Impactful Cards (Presence on Win Rate):
+                               card win_rate_with win_rate_without difference p_value adjusted_p_value
+           Sisu_Divine_Water_Dragon         53.4%            23.8%     +0.296   0.003            0.159
+        Robin_Hood_Unrivaled_Archer         63.6%            38.2%     +0.254   0.108            0.649
+      McDuck_Manor_Scrooges_Mansion         53.6%            36.1%     +0.175   0.113            0.649
+Hiram_Flaversham_Intrigued_Inventor         48.1%            32.6%     +0.155   0.118            0.649
+             Mufasa_Betrayed_Leader         50.0%            35.5%     +0.145   0.155            0.649
+                                ...                                                                   
+                         Lucky_Dime          0.0%            41.8%     -0.418   0.238            0.649
+                            Lantern          0.0%            41.8%     -0.418   0.238            0.649
+     Mickey_Mouse_Musketeer_Captain          0.0%            42.7%     -0.427   0.091            0.649
+         Kida_Protector_of_Atlantis          0.0%            43.2%     -0.432   0.057            0.649
+                          Let_It_Go          0.0%            45.1%     -0.451   0.008            0.252
+Training KNN...
+Training Decision Tree...
+Training Random Forest...
+Training Neural Network...
+Training Naive Bayes...
+Training SVM...
+
+Results Summary:
+       classifier  accuracy  precision  ...    auc  ci_lower  ci_upper
+0             KNN     0.600      0.389  ...  0.761     0.433     0.767
+1   Decision Tree     0.600      0.300  ...  0.645     0.433     0.767
+2   Random Forest     0.733      0.500  ...  0.801     0.567     0.900
+3  Neural Network     0.733      0.500  ...  0.483     0.567     0.867
+4     Naive Bayes     0.467      0.300  ...  0.557     0.300     0.633
+5             SVM     0.633      0.385  ...  0.682     0.467     0.800
+
+[6 rows x 8 columns]
+
+Cross-validation Results:
+       Classifier  Cross-validation_Score  Cross-validation_Standard_Deviation
+0             KNN                   0.500                                0.160
+1   Decision Tree                   0.529                                0.091
+2   Random Forest                   0.543                                0.107
+3  Neural Network                   0.543                                0.086
+4     Naive Bayes                   0.643                                0.096
+5             SVM                   0.629                                0.194
+
+=== Feature Importance Analysis ===
+
+Statistical Significance of All Features:
+                                  Feature T-statistic P-value Adjusted_P-value Significant  Is_Card Stars
+                 Sisu_Divine_Water_Dragon        3.08   0.003            0.159          No     True      
+                          starting_player         NaN     NaN              NaN          No    False      
+      Hiram_Flaversham_Intrigued_Inventor        1.58   0.118            0.649          No     True      
+                                Pawpsicle       -0.23   0.821            0.946          No     True      
+                     Simba_Protective_Cub       -1.99   0.049            0.649          No     True      
+                     Sail_the_Azurite_Sea        0.08   0.940            0.961          No     True      
+                             Just_in_Time        0.35   0.730            0.922          No     True      
+Scrooge_McDuck_Afficionado_of_Antiquities       -0.80   0.426            0.692          No     True      
+                Moana_Determined_Explorer       -1.42   0.158            0.649          No     True      
+            Merlin_Intellectual_Visionary        0.62   0.539            0.735          No     True      
+               Piglet_Pooh_Pirate_Captain        1.37   0.173            0.649          No     True      
+                                Let_It_Go       -2.69   0.008            0.252          No     True      
+                       Lilo_Making_a_Wish       -0.74   0.461            0.709          No     True      
+                           Kida_Atlantean        0.62   0.539            0.735          No     True      
+                  Daisy_Duck_Donalds_Date       -0.57   0.570            0.759          No     True      
+                  Joshua_Sweet_The_Doctor       -2.18   0.032            0.636          No     True      
+              Robin_Hood_Unrivaled_Archer        1.62   0.108            0.649          No     True      
+               Kida_Protector_of_Atlantis       -1.93   0.057            0.649          No     True      
+                   Mufasa_Betrayed_Leader        1.43   0.155            0.649          No     True      
+                   Tiana_Restaurant_Owner        0.05   0.961            0.961          No     True      
+            McDuck_Manor_Scrooges_Mansion        1.60   0.113            0.649          No     True      
+            The_Queen_Commanding_Presence       -0.76   0.447            0.705          No     True      
+                 Aurora_Tranquil_Princess        1.02   0.309            0.679          No     True      
+     Wendy_Darling_Authority_on_Peter_Pan       -0.12   0.908            0.961          No     True      
+                  The_Queen_Regal_Monarch        0.91   0.365            0.679          No     True      
+                       Alice_Savvy_Sailor       -1.42   0.158            0.649          No     True      
+                      Sven_Reindeer_Steed       -1.25   0.215            0.649          No     True      
+           Duke_Weaselton_SmallTime_Crook       -1.20   0.234            0.649          No     True      
+                     Nala_Mischievous_Cub       -0.33   0.743            0.922          No     True      
+                 Baymax_Armored_Companion       -0.43   0.668            0.872          No     True      
+                Never_Land_Mermaid_Lagoon       -0.07   0.947            0.961          No     True      
+                 Baloo_von_Bruinwald_XIII       -0.97   0.332            0.679          No     True      
+            Worlds_Greatest_Criminal_Mind        0.10   0.919            0.961          No     True      
+          Minnie_Mouse_Musketeer_Champion        0.10   0.919            0.961          No     True      
+                Hiram_Flaversham_Toymaker       -0.21   0.836            0.946          No     True      
+                       Lilo_Escape_Artist        0.32   0.753            0.922          No     True      
+            Donald_Duck_Musketeer_Soldier       -0.95   0.342            0.679          No     True      
+              Cogsworth_Grandfather_Clock       -1.19   0.238            0.649          No     True      
+                 Aurora_Dreaming_Guardian       -1.19   0.238            0.649          No     True      
+          Julieta_Madrigal_Excellent_Cook       -0.69   0.493            0.731          No     True      
+                               Lucky_Dime       -1.19   0.238            0.649          No     True      
+          Sugar_Rush_Speedway_Finish_Line       -1.19   0.238            0.649          No     True      
+         Flintheart_Glomgold_Lone_Cheater       -1.19   0.238            0.649          No     True      
+                   Mickey_Mouse_Detective        0.10   0.919            0.961          No     True      
+           Mickey_Mouse_Musketeer_Captain       -1.71   0.091            0.649          No     True      
+             Rapunzel_Gifted_with_Healing       -0.97   0.332            0.679          No     True      
+                     Hans_Noble_Scoundrel        0.26   0.796            0.937          No     True      
+                Basil_Practiced_Detective       -1.19   0.238            0.649          No     True      
+                        HeiHei_Boat_Snack       -0.83   0.407            0.679          No     True      
+                   Stitch_Carefree_Surfer       -0.83   0.407            0.679          No     True      
+                       Chip_Friend_Indeed       -0.83   0.407            0.679          No     True      
+         Tadashi_Hamada_Gifted_Roboticist       -0.83   0.407            0.679          No     True      
+                    Simba_Pride_Protector         NaN     NaN              NaN          No     True      
+                   Pride_Lands_Pride_Rock       -0.83   0.407            0.679          No     True      
+                           How_Far_Ill_Go       -0.27   0.787            0.937          No     True      
+                                  Lantern       -1.19   0.238            0.649          No     True      
+                         Tipo_Growing_Son       -0.83   0.407            0.679          No     True      
+                         Stitch_Rock_Star       -0.66   0.512            0.731          No     True      
+          Gramma_Tala_Spirit_of_the_Ocean       -0.66   0.512            0.731          No     True      
+                         Anna_TrueHearted       -0.83   0.407            0.679          No     True      
+                        Belle_Of_the_Ball       -0.83   0.407            0.679          No     True      
+                   Anna_Braving_the_Storm       -0.83   0.407            0.679          No     True      
+
+=== Ensemble Model Analysis ===
+
+Ensemble Model Performance:
+Accuracy: 0.667
+Precision: 0.429
+Recall: 0.750
+F1-score: 0.545
+AUC: 0.733
